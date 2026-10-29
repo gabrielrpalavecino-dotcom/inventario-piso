@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Inventario de pisos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f0f3;
+            margin: 0;
+            padding: 0;
+        }
+
+        .center {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #login-screen {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .login-box {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            min-width: 300px;
+        }
+
+        .login-box h2 {
+            margin-top: 0;
+        }
+
+        .login-box select,
+        .login-box input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            border: none;
+            border-radius: 10px;
+            padding: 8px 14px;
+            cursor: pointer;
+            margin: 3px;
+        }
+
+        .btn.green {
+            background: #2ecc71;
+            color: #fff;
+        }
+
+        .btn.red {
+            background: #e74c3c;
+            color: #fff;
+        }
+
+        .btn.yellow {
+            background: #f1c40f;
+            color: #000;
+        }
+
+        .btn.gray {
+            background: #7f8c8d;
+            color: #fff;
+        }
+
+        #login-error {
+            color: #e74c3c;
+            display: none;
+            font-size: 0.9em;
+        }
+
+        #panel-usuario,
+        #panel-admin {
+            display: none;
+            padding: 20px;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .card-body {
+            padding: 15px;
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .icon {
+            font-size: 20px;
+        }
+
+        #dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 15px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 6px;
+            font-size: 0.9em;
+        }
+
+        th {
+            background: #f7f7f7;
+        }
+
+        .export-bar {
+            margin: 10px 0;
+        }
+
+        .galeria-fotos img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin: 4px;
+            cursor: pointer;
+        }
+
+        #modal-foto {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
+
+        #modal-img {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="login-screen" class="center">
+        <div class="login-box">
+            <h2>Login</h2>
+            <select id="login-user"></select>
+            <input type="password" id="login-pass" placeholder="Clave">
+            <button class="btn green" onclick="login()">Entrar</button>
+            <div id="login-error">Usuario o clave incorrectos</div>
+        </div>
+    </div>
+
+    <div id="panel-usuario">
+        <div class="top-bar">
+            <div>
+                <h2>Panel de usuario</h2>
+                <input id="edit-nombre" placeholder="Nombre usuario"
+                    style="padding:8px; border-radius:10px; border:1px solid #ccc;">
+                <input id="edit-clave" placeholder="Nueva clave"
+                    style="padding:8px; border-radius:10px; border:1px solid #ccc;">
+                <button class="btn green" onclick="guardarCambiosUsuario()">Guardar cambios</button>
+                <button class="btn red" onclick="resetearClave()">Resetear clave</button>
+                <button class="btn gray" onclick="logoutUsuario()">Salir del usuario</button>
+            </div>
+            <div>
+                <select id="selector-pisos" onchange="cambiarPiso()"
+                    style="padding:8px; border-radius:10px; border:1px solid #ccc;"></select>
+                <input id="nuevo-piso" placeholder="Nuevo piso"
+                    style="padding:8px; border-radius:10px; border:1px solid #ccc;">
+                <button class="btn green" onclick="crearPiso()">Crear piso</button>
+            </div>
+        </div>
+
+        <div class="export-bar">
+            <input id="hora-export" type="time" style="padding:8px; border-radius:10px; border:1px solid #ccc;">
+            <button class="btn green" onclick="exportarTodo()">Exportar PDF</button>
+            <button class="btn yellow" onclick="guardarEntrada()">Guardar como ENTRADA</button>
+            <button class="btn yellow" onclick="guardarSalida()">Guardar como SALIDA</button>
+            <button class="btn gray" onclick="compararEntradaSalida()">Comparar Entrada vs Salida</button>
+        </div>
+
+        <div id="dashboard"></div>
+
+        <div class="card" id="info-piso" style="display:none;">
+            <div class="card-header">
+                <div class="card-title">
+                    <span class="icon">🏠</span>
+                    <h2>Datos del piso</h2>
+                </div>
+            </div>
+            <div class="card-body">
+                <input id="piso-dueno" placeholder="Dueño"
+                    style="width:100%; padding:8px; border-radius:10px; border:1px solid #ccc; margin-bottom:5px;">
+                <input id="piso-direccion" placeholder="Dirección"
+                    style="width:100%; padding:8px; border-radius:10px; border:1px solid #ccc; margin-bottom:5px;">
+                <input id="piso-precio1" placeholder="Precio año 1"
+                    style="width:100%; padding:8px; border-radius:10px; border:1px solid #ccc; margin-bottom:5px;">
+                <input id="piso-precio2" placeholder="Precio año 2"
+                    style="width:100%; padding:8px; border-radius:10px; border:1px solid #ccc; margin-bottom:5px;">
+                <input id="piso-precio3" placeholder="Precio año 3"
+                    style="width:100%; padding:8px; border-radius:10px; border:1px solid #ccc; margin-bottom:5px;">
+                <input id="piso-precio4" placeholder="Precio año 4"
+                    style="width:100%; padding:8px; border-radius:10px; border:1px solid #ccc; margin-bottom:5px;">
+                <input id="piso-precio5" placeholder="Precio año 5"
+                    style="width:100%; padding:8px; border-radius:10px; border:1px solid #ccc; margin-bottom:5px;">
+                <textarea id="piso-notas" placeholder="Notas"
+                    style="width:100%; padding:8px; border-radius:10px; border:1px solid #ccc;"></textarea>
+                <button class="btn green" onclick="guardarDatosPiso()">Guardar datos del piso</button>
+            </div>
+        </div>
+
+        <div class="card" id="panel-firmas" style="margin-top:px;">
+            <div class="card-header">
+                <div class="card-title">
+                    <span class="icon">✍️</span>
+                    <h2>Firmas digitales</h2>
+                </div>
+            </div>
+            <div class="card-body">
+                <h3>Firma del agente</h3>
+                <canvas id="firma-agente" width="300" height="150"
+                    style="border:1px solid #ccc; border-radius:10px;"></canvas>
+                <button class="btn green" onclick="guardarFirma('agente')">Guardar firma agente</button>
+                <button class="btn red" onclick="limpiarFirma('agente')">Limpiar</button>
+
+                <h3>Firma del propietario</h3>
+                <canvas id="firma-propietario" width="300" height="150"
+                    style="border:1px solid #ccc; border-radius:10px;"></canvas>
+                <button class="btn green" onclick="guardarFirma('propietario')">Guardar firma propietario</button>
+                <button class="btn red" onclick="limpiarFirma('propietario')">Limpiar</button>
+
+                <h3>Firma del inquilino</h3>
+                <canvas id="firma-inquilino" width="300" height="150"
+                    style="border:1px solid #ccc; border-radius:10px;"></canvas>
+                <button class="btn green" onclick="guardarFirma('inquilino')">Guardar firma inquilino</button>
+                <button class="btn red" onclick="limpiarFirma('inquilino')">Limpiar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="panel-admin" style="display:none; margin:20px; padding:15px; background:#ffe9c4; border-radius:10px;">
+        <h3>Panel de Administrador</h3>
+        <p>Ver pisos de cualquier usuario:</p>
+        <select id="admin-selector-usuario" onchange="adminCargarPisos()"
+            style="padding:10px; border-radius:10px;"></select>
+        <select id="admin-selector-piso" onchange="adminAbrirPiso()" style="padding:10px; border-radius:10px;"></select>
+        <button class="btn gray" onclick="logoutUsuario()">Salir del administrador</button>
+        <div id="dashboard-admin"></div>
+    </div>
+
+    <div id="modal-foto">
+        <img id="modal-img">
+    </div>
+
+    <script>
+        let usuarioActual = null;
+
+        const zonas = [
+            { id: "salon", nombre: "Salón" },
+            { id: "cocina", nombre: "Cocina" },
+            { id: "banio", nombre: "Baño" },
+            { id: "habitacion1", nombre: "Habitación 1" },
+            { id: "habitacion2", nombre: "Habitación 2" },
+            { id: "terraza", nombre: "Terraza" }
+        ];
+
+        /* ============================
+           USUARIOS INICIALES
+           ============================ */
+        if (!localStorage.getItem("usuarios")) {
+            localStorage.setItem("usuarios", JSON.stringify({
+                admin: { nombre: "Administrador", clave: "9999", rol: "admin" },
+                user1: { nombre: "Usuario 1", clave: "1111", rol: "user" },
+                user2: { nombre: "Usuario 2", clave: "2222", rol: "user" },
+                user3: { nombre: "Usuario 3", clave: "3333", rol: "user" },
+                user4: { nombre: "Usuario 4", clave: "4444", rol: "user" },
+                user5: { nombre: "Usuario 5", clave: "5555", rol: "user" }
+            }));
+        }
+
+        /* ============================
+           CREAR TARJETAS DE ZONAS
+           ============================ */
+        function crearTarjetas() {
+            const dash = document.getElementById("dashboard");
+            dash.innerHTML = "";
+
+            zonas.forEach(z => {
+                const card = document.createElement("div");
+                card.className = "card";
+
+                card.innerHTML = `
+            <div class="card-header">
+                <div class="card-title">
+                    <span class="icon">📦</span>
+                    <h2>${z.nombre}</h2>
+                </div>
+            </div>
+            <div class="card-body">
+                <button class="btn gray" onclick="subirFoto('${z.id}')">📸 Añadir foto</button>
+                <input type="file" id="file-${z.id}" accept="image/*" style="display:none" onchange="guardarFoto(event, '${z.id}')">
+                <div id="galeria-${z.id}" class="galeria-fotos"></div>
+
+                <table id="table-${z.id}">
+                    <tr>
+                        <th>Objeto</th>
+                        <th>Cant.</th>
+                        <th>Estado</th>
+                        <th>Acción</th>
+                    </tr>
+                </table>
+                <button class="btn green" onclick="addRow('${z.id}')">Añadir objeto</button>
+            </div>
+        `;
+                dash.appendChild(card);
+            });
+        }
+
+        /* ============================
+           INVENTARIO — FILAS
+           ============================ */
+        function addRow(section) {
+            const table = document.getElementById(`table-${section}`);
+            const row = table.insertRow(-1);
+
+            row.innerHTML = `
+        <td contenteditable="true">Nuevo objeto</td>
+        <td contenteditable="true">1</td>
+        <td contenteditable="true">Bueno</td>
+        <td>
+            <button class="btn green" onclick="duplicarFila(this)">Duplicar</button>
+            <button class="btn red" onclick="deleteRow(this)">Eliminar</button>
+        </td>
+    `;
+            saveInventory();
+        }
+
+        function deleteRow(btn) {
+            const row = btn.parentNode.parentNode;
+            row.parentNode.removeChild(row);
+            saveInventory();
+        }
+
+        function duplicarFila(btn) {
+            const row = btn.parentNode.parentNode;
+            const table = row.parentNode;
+            const clone = table.insertRow(row.rowIndex + 1);
+            clone.innerHTML = row.innerHTML;
+            saveInventory();
+        }
+
+        /* ============================
+           GUARDAR / CARGAR INVENTARIO
+           ============================ */
+        function saveInventory() {
+            if (!usuarioActual) return;
+            const piso = document.getElementById("selector-pisos").value;
+            if (!piso) return;
+
+            const data = {};
+
+            zonas.forEach(z => {
+                const table = document.getElementById(`table-${z.id}`);
+                const rows = table.querySelectorAll("tr:not(:first-child)");
+                data[z.id] = [];
+
+                rows.forEach(r => {
+                    const c = r.querySelectorAll("td");
+                    data[z.id].push({
+                        obj: c[0].innerText,
+                        cant: c[1].innerText,
+                        estado: c[2].innerText
+                    });
+                });
+            });
+
+            localStorage.setItem("inventario_" + usuarioActual + "_" + piso, JSON.stringify(data));
+        }
+
+        function cargarInventario(piso) {
+            if (!usuarioActual) return;
+
+            const data = JSON.parse(localStorage.getItem("inventario_" + usuarioActual + "_" + piso) || "{}");
+
+            zonas.forEach(z => {
+                const table = document.getElementById(`table-${z.id}`);
+                table.innerHTML = `
+            <tr>
+                <th>Objeto</th>
+                <th>Cant.</th>
+                <th>Estado</th>
+                <th>Acción</th>
+            </tr>
+        `;
+
+                (data[z.id] || []).forEach(item => {
+                    const row = table.insertRow(-1);
+                    row.innerHTML = `
+                <td contenteditable="true">${item.obj}</td>
+                <td contenteditable="true">${item.cant}</td>
+                <td contenteditable="true">${item.estado}</td>
+                <td>
+                    <button class="btn green" onclick="duplicarFila(this)">Duplicar</button>
+                    <button class="btn red" onclick="deleteRow(this)">Eliminar</button>
+                </td>
+            `;
+                });
+            });
+        }
+
+        /* ============================
+           FOTOS POR ZONA
+           ============================ */
+        function subirFoto(zona) {
+            document.getElementById(`file-${zona}`).click();
+        }
+
+        function guardarFoto(event, zona) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const url = URL.createObjectURL(file);
+            const fecha = new Date().toLocaleDateString("es-ES");
+
+            const piso = document.getElementById("selector-pisos").value;
+            const key = `fotos_${usuarioActual}_${piso}_${zona}`;
+
+            const fotos = JSON.parse(localStorage.getItem(key) || "[]");
+            fotos.push({ url, fecha });
+            localStorage.setItem(key, JSON.stringify(fotos));
+
+            mostrarGaleria(zona);
+        }
+
+        function mostrarGaleria(zona) {
+            const piso = document.getElementById("selector-pisos").value;
+            const key = `fotos_${usuarioActual}_${piso}_${zona}`;
+            const fotos = JSON.parse(localStorage.getItem(key) || "[]");
+
+            const galeria = document.getElementById(`galeria-${zona}`);
+            galeria.innerHTML = "";
+
+            fotos.forEach(f => {
+                const img = document.createElement("img");
+                img.src = f.url;
+                img.onclick = () => verFotoGrande(f.url);
+                galeria.appendChild(img);
+            });
+        }
+
+        function verFotoGrande(url) {
+            const modal = document.getElementById("modal-foto");
+            const img = document.getElementById("modal-img");
+
+            img.src = url;
+            modal.style.display = "flex";
+
+            modal.onclick = () => modal.style.display = "none";
+        }
+
+        /* ============================
+           LOGIN — FUNCIONES
+           ============================ */
+        function cargarUsuariosLogin() {
+            const usuarios = JSON.parse(localStorage.getItem("usuarios"));
+            const sel = document.getElementById("login-user");
+
+            sel.innerHTML = '<option value="">Selecciona usuario...</option>';
+
+            Object.keys(usuarios).forEach(id => {
+                const opt = document.createElement("option");
+                opt.value = id;
+                opt.textContent = usuarios[id].nombre;
+                sel.appendChild(opt);
+            });
+        }
+
+        function login() {
+            const usuarios = JSON.parse(localStorage.getItem("usuarios"));
+            const user = document.getElementById("login-user").value;
+            const pass = document.getElementById("login-pass").value;
+
+            if (!user || !pass) return;
+
+            if (usuarios[user].clave !== pass) {
+                document.getElementById("login-error").style.display = "block";
+                return;
+            }
+
+            usuarioActual = user;
+
+            if (usuarios[user].rol === "admin") {
+                document.getElementById("login-screen").style.display = "none";
+                document.getElementById("panel-admin").style.display = "block";
+                cargarUsuariosParaAdmin();
+            } else {
+                document.getElementById("login-screen").style.display = "none";
+                document.getElementById("panel-usuario").style.display = "block";
+                cargarListaPisos();
+            }
+        }
+
+        function logoutUsuario() {
+            usuarioActual = null;
+
+            document.getElementById("panel-admin").style.display = "none";
+            document.getElementById("panel-usuario").style.display = "none";
+            document.getElementById("login-screen").style.display = "flex";
+
+            document.getElementById("login-pass").value = "";
+            document.getElementById("login-error").style.display = "none";
+
+            document.getElementById("selector-pisos").innerHTML = "";
+            document.getElementById("dashboard").innerHTML = "";
+            document.getElementById("info-piso").style.display = "none";
+        }
+
+        /* ============================
+           CAMBIAR NOMBRE / CLAVE
+           ============================ */
+        function guardarCambiosUsuario() {
+            if (!usuarioActual) return;
+
+            const usuarios = JSON.parse(localStorage.getItem("usuarios"));
+            const nuevoNombre = document.getElementById("edit-nombre").value.trim();
+            const nuevaClave = document.getElementById("edit-clave").value.trim();
+
+            if (nuevoNombre !== "") usuarios[usuarioActual].nombre = nuevoNombre;
+            if (nuevaClave !== "") usuarios[usuarioActual].clave = nuevaClave;
+
+            localStorage.setItem("usuarios", JSON.stringify(usuarios));
+            alert("Datos del usuario actual actualizados.");
+            cargarUsuariosLogin();
+        }
+
+        function resetearClave() {
+            if (!usuarioActual) return;
+
+            const usuarios = JSON.parse(localStorage.getItem("usuarios"));
+            const nuevaClave = Math.floor(1000 + Math.random() * 9000).toString();
+
+            usuarios[usuarioActual].clave = nuevaClave;
+            localStorage.setItem("usuarios", JSON.stringify(usuarios));
+
+            alert("Tu nueva clave es: " + nuevaClave);
+        }
+
+        /* ============================
+           PISOS POR USUARIO
+           ============================ */
+        function cargarListaPisos() {
+            if (!usuarioActual) return;
+
+            const sel = document.getElementById("selector-pisos");
+            sel.innerHTML = "";
+
+            const key = "lista_pisos_" + usuarioActual;
+            const pisosGuardados = JSON.parse(localStorage.getItem(key) || "[]");
+
+            if (pisosGuardados.length === 0) {
+                pisosGuardados.push("Piso 1");
+                localStorage.setItem(key, JSON.stringify(pisosGuardados));
+            }
+
+            pisosGuardados.forEach(p => {
+                const opt = document.createElement("option");
+                opt.value = p;
+                opt.textContent = p;
+                sel.appendChild(opt);
+            });
+
+            sel.value = pisosGuardados[0];
+            crearTarjetas();
+            cargarInventario(sel.value);
+            cargarDatosPiso(sel.value);
+            zonas.forEach(z => mostrarGaleria(z.id));
+            cargarFirmas();
+        }
+
+        function crearPiso() {
+            if (!usuarioActual) return;
+
+            const nombre = document.getElementById("nuevo-piso").value.trim();
+            if (!nombre) return;
+
+            const key = "lista_pisos_" + usuarioActual;
+            const pisosGuardados = JSON.parse(localStorage.getItem(key) || "[]");
+
+            if (!pisosGuardados.includes(nombre)) {
+                pisosGuardados.push(nombre);
+                localStorage.setItem(key, JSON.stringify(pisosGuardados));
+            }
+
+            cargarListaPisos();
+            document.getElementById("nuevo-piso").value = "";
+        }
+
+        function cambiarPiso() {
+            const piso = document.getElementById("selector-pisos").value;
+            if (!piso || !usuarioActual) return;
+
+            crearTarjetas();
+            cargarInventario(piso);
+            cargarDatosPiso(piso);
+            zonas.forEach(z => mostrarGaleria(z.id));
+            cargarFirmas();
+        }
+
+        /* ============================
+           DATOS DEL PISO
+           ============================ */
+        function guardarDatosPiso() {
+            const piso = document.getElementById("selector-pisos").value;
+            if (!piso || !usuarioActual) return;
+
+            const datos = {
+                dueno: document.getElementById("piso-dueno").value,
+                direccion: document.getElementById("piso-direccion").value,
+                precio1: document.getElementById("piso-precio1").value,
+                precio2: document.getElementById("piso-precio2").value,
+                precio3: document.getElementById("piso-precio3").value,
+                precio4: document.getElementById("piso-precio4").value,
+                precio5: document.getElementById("piso-precio5").value,
+                notas: document.getElementById("piso-notas").value
+            };
+
+            localStorage.setItem("datos_piso_" + usuarioActual + "_" + piso, JSON.stringify(datos));
+            alert("Datos del piso guardados");
+        }
+
+        function cargarDatosPiso(piso) {
+            if (!usuarioActual) return;
+
+            const info = document.getElementById("info-piso");
+            info.style.display = "block";
+
+            const datos = JSON.parse(localStorage.getItem("datos_piso_" + usuarioActual + "_" + piso) || "{}");
+
+            document.getElementById("piso-dueno").value = datos.dueno || "";
+            document.getElementById("piso-direccion").value = datos.direccion || "";
+            document.getElementById("piso-precio1").value = datos.precio1 || "";
+            document.getElementById("piso-precio2").value = datos.precio2 || "";
+            document.getElementById("piso-precio3").value = datos.precio3 || "";
+            document.getElementById("piso-precio4").value = datos.precio4 || "";
+            document.getElementById("piso-precio5").value = datos.precio5 || "";
+            document.getElementById("piso-notas").value = datos.notas || "";
+        }
+
+        /* ============================
+           EXPORTAR TODO EN PDF
+           ============================ */
+        function exportarTodo() {
+            const piso = document.getElementById("selector-pisos").value;
+            if (!piso) {
+                alert("Selecciona un piso primero.");
+                return;
+            }
+
+            const horaSeleccionada = document.getElementById("hora-export").value || "Sin especificar";
+            const datos = JSON.parse(localStorage.getItem("datos_piso_" + usuarioActual + "_" + piso) || "{}");
+            const fecha = new Date().toLocaleDateString("es-ES");
+
+            let zonasHTML = "";
+
+            zonas.forEach(z => {
+                const table = document.getElementById(`table-${z.id}`);
+                if (!table) return;
+
+                const rows = table.querySelectorAll("tr:not(:first-child)");
+                let items = "";
+
+                if (rows.length === 0) {
+                    items = `<p>(sin objetos)</p>`;
+                } else {
+                    rows.forEach(r => {
+                        const c = r.querySelectorAll("td");
+                        items += `
+                    <div>
+                        <strong>${c[0].innerText}</strong><br>
+                        Cantidad: ${c[1].innerText}<br>
+                        Estado: ${c[2].innerText}
+                    </div>
+                `;
+                    });
+                }
+
+                const keyFotos = `fotos_${usuarioActual}_${piso}_${z.id}`;
+                const fotosZona = JSON.parse(localStorage.getItem(keyFotos) || "[]");
+
+                let fotosHTML = "";
+                fotosZona.forEach(f => {
+                    fotosHTML += `<img src="${f.url}" style="width:120px; height:120px; object-fit:cover; margin:5px;">`;
+                });
+
+                zonasHTML += `
+            <div style="margin-bottom:20px;">
+                <h3>${z.nombre}</h3>
+                ${items}
+                <div>${fotosHTML}</div>
+            </div>
+        `;
+            });
+
+            const firmaAgente = localStorage.getItem(`firma_${usuarioActual}_${piso}_agente`);
+            const firmaProp = localStorage.getItem(`firma_${usuarioActual}_${piso}_propietario`);
+            const firmaInq = localStorage.getItem(`firma_${usuarioActual}_${piso}_inquilino`);
+
+            let firmasHTML = `
+<h2>Firmas</h2>
+<div style="display:flex; gap:20px;">
+    <div>
+        <p>Agente</p>
+        ${firmaAgente ? `<img src="${firmaAgente}" style="width:200px;">` : "<p>Sin firma</p>"}
+    </div>
+    <div>
+        <p>Propietario</p>
+        ${firmaProp ? `<img src="${firmaProp}" style="width:200px;">` : "<p>Sin firma</p>"}
+    </div>
+    <div>
+        <p>Inquilino</p>
+        ${firmaInq ? `<img src="${firmaInq}" style="width:200px;">` : "<p>Sin firma</p>"}
+    </div>
+</div>
+`;
+
+            const html = `
+<!DOCTYPE html>
+<html>
+<head>
+<title>Inventario — ${piso}</title>
+<style>
+body { font-family: Arial; background:#f7f1e3; padding:20px; }
+.box { background:#fff8e6; padding:20px; border-radius:15px; margin-bottom:25px; }
+img { border-radius:10px; }
+</style>
+</head>
+<body>
+<h1>Inventario Multi‑Pisos</h1>
+<h2>Piso: ${piso}</h2>
+<p><strong>Fecha:</strong> ${fecha}</p>
+<p><strong>Horario seleccionado:</strong> ${horaSeleccionada}</p>
+
+<div class="box">
+  <h2>Datos del piso</h2>
+  <p><strong>Dueño:</strong> ${datos.dueno || "—"}</p>
+  <p><strong>Dirección:</strong> ${datos.direccion || "—"}</p>
+  <p><strong>Precio mensual — Año 1:</strong> ${datos.precio1 || "—"} €</p>
+  <p><strong>Precio mensual — Año 2:</strong> ${datos.precio2 || "—"} €</p>
+  <p><strong>Precio mensual — Año 3:</strong> ${datos.precio3 || "—"} €</p>
+  <p><strong>Precio mensual — Año 4:</strong> ${datos.precio4 || "—"} €</p>
+  <p><strong>Precio mensual — Año 5:</strong> ${datos.precio5 || "—"} €</p>
+  <p><strong>Notas:</strong> ${datos.notas || "—"}</p>
+</div>
+
+<div class="box">
+  <h2>Inventario por zonas</h2>
+  ${zonasHTML}
+</div>
+
+<div class="box">
+  ${firmasHTML}
+</div>
+
+</body>
+</html>
+`;
+
+            const win = window.open("about:blank", "_blank");
+            win.document.open();
+            win.document.write(html);
+            win.document.close();
+            win.print();
+        }
+
+        /* ============================
+           ENTRADA / SALIDA
+           ============================ */
+        function guardarEntrada() {
+            const piso = document.getElementById("selector-pisos").value;
+            const key = "inventario_" + usuarioActual + "_" + piso;
+
+            const data = JSON.parse(localStorage.getItem(key) || "{}");
+            localStorage.setItem(key + "_entrada", JSON.stringify(data));
+
+            zonas.forEach(z => {
+                const fotosKey = `fotos_${usuarioActual}_${piso}_${z.id}`;
+                const fotos = JSON.parse(localStorage.getItem(fotosKey) || "[]");
+                localStorage.setItem(fotosKey + "_entrada", JSON.stringify(fotos));
+            });
+
+            alert("Inventario guardado como ENTRADA");
+        }
+
+        function guardarSalida() {
+            const piso = document.getElementById("selector-pisos").value;
+            const key = "inventario_" + usuarioActual + "_" + piso;
+
+            const data = JSON.parse(localStorage.getItem(key) || "{}");
+            localStorage.setItem(key + "_salida", JSON.stringify(data));
+
+            zonas.forEach(z => {
+                const fotosKey = `fotos_${usuarioActual}_${piso}_${z.id}`;
+                const fotos = JSON.parse(localStorage.getItem(fotosKey) || "[]");
+                localStorage.setItem(fotosKey + "_salida", JSON.stringify(fotos));
+            });
+
+            alert("Inventario guardado como SALIDA");
+        }
+
+        function compararEntradaSalida() {
+            const piso = document.getElementById("selector-pisos").value;
+
+            const entrada = JSON.parse(localStorage.getItem("inventario_" + usuarioActual + "_" + piso + "_entrada") || "{}");
+            const salida = JSON.parse(localStorage.getItem("inventario_" + usuarioActual + "_" + piso + "_salida") || "{}");
+
+            if (!Object.keys(entrada).length || !Object.keys(salida).length) {
+                alert("Debes guardar ENTRADA y SALIDA antes de comparar.");
+                return;
+            }
+
+            let htmlZonas = "";
+
+            zonas.forEach(z => {
+                const ent = entrada[z.id] || [];
+                const sal = salida[z.id] || [];
+
+                let cambios = "";
+
+                const mapEntrada = {};
+                const mapSalida = {};
+
+                ent.forEach(i => mapEntrada[i.obj] = i);
+                sal.forEach(i => mapSalida[i.obj] = i);
+
+                for (const obj in mapSalida) {
+                    if (!mapEntrada[obj]) {
+                        cambios += `<p>🟢 Nuevo objeto: <strong>${obj}</strong></p>`;
+                    }
+                }
+
+                for (const obj in mapEntrada) {
+                    if (!mapSalida[obj]) {
+                        cambios += `<p>🔴 Objeto faltante: <strong>${obj}</strong></p>`;
+                    }
+                }
+
+                for (const obj in mapEntrada) {
+                    if (mapSalida[obj]) {
+                        const e = mapEntrada[obj];
+                        const s = mapSalida[obj];
+
+                        if (e.cant !== s.cant) {
+                            cambios += `<p>🟡 Cantidad cambió en <strong>${obj}</strong>: ${e.cant} → ${s.cant}</p>`;
+                        }
+
+                        if (e.estado !== s.estado) {
+                            cambios += `<p>🟠 Estado cambió en <strong>${obj}</strong>: ${e.estado} → ${s.estado}</p>`;
+                        }
+                    }
+                }
+
+                const fotosEntrada = JSON.parse(localStorage.getItem(`fotos_${usuarioActual}_${piso}_${z.id}_entrada`) || "[]");
+                const fotosSalida = JSON.parse(localStorage.getItem(`fotos_${usuarioActual}_${piso}_${z.id}_salida`) || "[]");
+
+                let fotosHTML = "<div style='display:flex; gap:10px;'>";
+
+                fotosEntrada.forEach(f => {
+                    fotosHTML += `<div><p>Entrada</p><img src="${f.url}" style="width:120px; height:120px; object-fit:cover;"></div>`;
+                });
+
+                fotosSalida.forEach(f => {
+                    fotosHTML += `<div><p>Salida</p><img src="${f.url}" style="width:120px; height:120px; object-fit:cover;"></div>`;
+                });
+
+                fotosHTML += "</div>";
+
+                htmlZonas += `
+            <div style="margin-bottom:30px;">
+                <h2>${z.nombre}</h2>
+                ${cambios || "<p>Sin cambios</p>"}
+                ${fotosHTML}
+            </div>
+        `;
+            });
+
+            const win = window.open("about:blank", "_blank");
+            win.document.open();
+            win.document.write(`
+        <html>
+        <head>
+            <title>Comparativa Entrada/Salida</title>
+            <style>
+                body { font-family: Arial; padding:20px; background:#f7f1e3; }
+                h1 { margin-bottom:20px; }
+                img { border-radius:10px; }
+            </style>
+        </head>
+        <body>
+            <h1>Comparativa Entrada / Salida — ${piso}</h1>
+            ${htmlZonas}
+        </body>
+        </html>
+    `);
+            win.document.close();
+            win.print();
+        }
+        /* ============================
+           FIRMAS DIGITALES
+           ============================ */
+        function guardarFirma(tipo) {
+            const piso = document.getElementById("selector-pisos").value;
+            const canvas = document.getElementById(`firma-${tipo}`);
+            const dataURL = canvas.toDataURL();
+
+            const key = `firma_${usuarioActual}_${piso}_${tipo}`;
+            localStorage.setItem(key, dataURL);
+
+            alert(`Firma de ${tipo} guardada`);
+        }
+
+        function limpiarFirma(tipo) {
+            const canvas = document.getElementById(`firma-${tipo}`);
+            const ctx = canvas.getContext("2d");
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function cargarFirmas() {
+            const piso = document.getElementById("selector-pisos").value;
+
+            ["agente", "propietario", "inquilino"].forEach(tipo => {
+                const key = `firma_${usuarioActual}_${piso}_${tipo}`;
+                const dataURL = localStorage.getItem(key);
+
+                if (dataURL) {
+                    const canvas = document.getElementById(`firma-${tipo}`);
+                    const ctx = canvas.getContext("2d");
+
+                    const img = new Image();
+                    img.onload = () => ctx.drawImage(img, 0, 0);
+                    img.src = dataURL;
+                } else {
+                    const canvas = document.getElementById(`firma-${tipo}`);
+                    const ctx = canvas.getContext("2d");
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            });
+        }
+
+        /* ============================
+           PANEL ADMIN
+           ============================ */
+        function cargarUsuariosParaAdmin() {
+            const usuarios = JSON.parse(localStorage.getItem("usuarios"));
+            const sel = document.getElementById("admin-selector-usuario");
+
+            sel.innerHTML = '<option value="">Selecciona usuario...</option>';
+
+            Object.keys(usuarios).forEach(id => {
+                if (usuarios[id].rol === "user") {
+                    const opt = document.createElement("option");
+                    opt.value = id;
+                    opt.textContent = usuarios[id].nombre;
+                    sel.appendChild(opt);
+                }
+            });
+        }
+
+        function adminCargarPisos() {
+            const usuario = document.getElementById("admin-selector-usuario").value;
+            const selPisos = document.getElementById("admin-selector-piso");
+
+            selPisos.innerHTML = "";
+
+            if (!usuario) return;
+
+            const key = "lista_pisos_" + usuario;
+            const pisos = JSON.parse(localStorage.getItem(key) || "[]");
+
+            pisos.forEach(p => {
+                const opt = document.createElement("option");
+                opt.value = p;
+                opt.textContent = p;
+                selPisos.appendChild(opt);
+            });
+        }
+
+        function adminAbrirPiso() {
+            const usuario = document.getElementById("admin-selector-usuario").value;
+            const piso = document.getElementById("admin-selector-piso").value;
+
+            if (!usuario || !piso) return;
+
+            const dash = document.getElementById("dashboard-admin");
+            dash.innerHTML = "";
+
+            const dataInv = JSON.parse(localStorage.getItem("inventario_" + usuario + "_" + piso) || "{}");
+            const datos = JSON.parse(localStorage.getItem("datos_piso_" + usuario + "_" + piso) || "{}");
+
+            let zonasHTML = "";
+
+            zonas.forEach(z => {
+                const items = dataInv[z.id] || [];
+                let lista = "";
+
+                items.forEach(item => {
+                    lista += `<div><strong>${item.obj}</strong> — ${item.cant} — ${item.estado}</div>`;
+                });
+
+                zonasHTML += `
+            <div style="margin-bottom:20px;">
+                <h3>${z.nombre}</h3>
+                ${lista || "<p>(sin objetos)</p>"}
+            </div>
+        `;
+            });
+
+            dash.innerHTML = `
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <span class="icon">📊</span>
+                    <h2>Resumen del piso: ${piso}</h2>
+                </div>
+            </div>
+            <div class="card-body">
+                <p><strong>Dueño:</strong> ${datos.dueno || "—"}</p>
+                <p><strong>Dirección:</strong> ${datos.direccion || "—"}</p>
+                <p><strong>Notas:</strong> ${datos.notas || "—"}</p>
+                ${zonasHTML}
+            </div>
+        </div>
+    `;
+        }
+
+        /* ============================
+           INICIALIZACIÓN
+           ============================ */
+        function activarCanvas(id) {
+            const canvas = document.getElementById(id);
+            const ctx = canvas.getContext("2d");
+            let dibujando = false;
+
+            canvas.addEventListener("mousedown", () => dibujando = true);
+            canvas.addEventListener("mouseup", () => dibujando = false);
+            canvas.addEventListener("mouseleave", () => dibujando = false);
+
+            canvas.addEventListener("mousemove", (e) => {
+                if (!dibujando) return;
+                ctx.fillStyle = "#000";
+                ctx.beginPath();
+                ctx.arc(e.offsetX, e.offsetY, 2, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            canvas.addEventListener("touchstart", (e) => {
+                e.preventDefault();
+                dibujando = true;
+            });
+            canvas.addEventListener("touchend", (e) => {
+                e.preventDefault();
+                dibujando = false;
+            });
+            canvas.addEventListener("touchmove", (e) => {
+                e.preventDefault();
+                if (!dibujando) return;
+                const rect = canvas.getBoundingClientRect();
+                const touch = e.touches[0];
+                const x = touch.clientX - rect.left;
+                const y = touch.clientY - rect.top;
+                ctx.fillStyle = "#000";
+                ctx.beginPath();
+                ctx.arc(x, y, 2, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        window.onload = () => {
+            activarCanvas("firma-agente");
+            activarCanvas("firma-propietario");
+            activarCanvas("firma-inquilino");
+            cargarUsuariosLogin();
+        };
+    </script>
+
+</body>
+
+</html>
